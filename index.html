@@ -273,7 +273,7 @@
         <h3>Add Project in Real Time</h3>
         <div class="adder-grid">
           <input id="addName" type="text" placeholder="Project name (required)" />
-          <input id="addAddress" type="text" placeholder="Address (required)" />
+          <input id="addAddress" type="text" placeholder="Address (optional)" />
           <input id="addVisit" type="number" min="1" placeholder="Visit rank" />
           <input id="addUpdate" type="number" min="1" placeholder="Update rank" />
           <button class="btn" id="addProjectBtn">Add</button>
@@ -795,8 +795,8 @@
     function addProject() {
       const name = (addName.value || "").trim();
       const address = (addAddress.value || "").trim();
-      if (!name || !address) {
-        alert("Project name and address are required.");
+      if (!name) {
+        alert("Project name is required.");
         return;
       }
       const exists = PROJECTS.some((p) => normalize(p.name) === normalize(name));
@@ -808,7 +808,7 @@
       const updateRank = Number(addUpdate.value) || nextRank("lastUpdated");
       PROJECTS.push({
         name,
-        address,
+        address: address || "—",
         lastVisited: visitRank,
         lastUpdated: updateRank,
       });
