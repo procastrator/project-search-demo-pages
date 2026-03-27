@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Search Strategy Demo</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a31;
+      --muted: #97a3c6;
+      --text: #e9eeff;
+      --ok: #2ad07f;
+      --warn: #f6c85f;
+      --accent: #6aa5ff;
+      --danger: #ff7a7a;
+      --line: #233157;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: linear-gradient(180deg, #0a0f1d, #0b1020);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 24px auto 48px;
+      padding: 0 16px;
+    }
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .input-row {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+    input[type="text"] {
+      width: 100%;
+      background: #0b1330;
+      color: var(--text);
+      border: 1px solid #2d3e72;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 16px;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    .btn {
+      background: #172447;
+      border: 1px solid #375493;
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .chips {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      border: 1px solid #355088;
+      background: #132142;
+      color: #d9e5ff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .panel h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 99px;
+      border: 1px solid;
+    }
+    .b-old { color: var(--warn); border-color: #846726; background: #2c2410; }
+    .b-new { color: var(--ok); border-color: #1f7d52; background: #0f2a1e; }
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 10px 14px 0;
+    }
+    .flow {
+      margin: 8px 14px 0;
+      display: grid;
+      gap: 6px;
+    }
+    .flow-step {
+      border: 1px solid #2a3c67;
+      background: #0d1732;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #b7c6ef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .flow-step .status {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      border: 1px solid #3a4f84;
+      color: #adc0f5;
+    }
+    .flow-step.success {
+      border-color: #1f7d52;
+      background: #0f2a1e;
+      color: #c5ffe1;
+    }
+    .flow-step.success .status {
+      border-color: #1f7d52;
+      color: #82f1bb;
+    }
+    .flow-step.fail {
+      border-color: #8a5a1a;
+      background: #30230f;
+      color: #ffe4b6;
+    }
+    .flow-step.fail .status {
+      border-color: #8a5a1a;
+      color: #ffd489;
+    }
+    .flow-step.muted {
+      opacity: 0.55;
+    }
+    ul.result {
+      list-style: none;
+      margin: 10px 0 0;
+      padding: 0 10px 10px;
+      overflow: auto;
+      flex: 1;
+    }
+    li.item {
+      border: 1px solid #2a3c67;
+      background: #0d1732;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .name { font-weight: 600; }
+    .sub {
+      margin-top: 4px;
+      color: #aebbe0;
+      font-size: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .hint {
+      margin-top: 6px;
+      color: #9ec2ff;
+      font-size: 12px;
+    }
+    .empty {
+      border: 1px dashed #486099;
+      background: #0f1b3e;
+      border-radius: 10px;
+      margin: 10px;
+      padding: 12px;
+      color: #c7d6ff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .legend {
+      margin-top: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: #c8d6ff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Project Search Demo: Current vs Optimized</h1>
+      <p>
+        Type in the search box to compare <strong>current prefix-only search</strong> with an
+        <strong>optimized layered strategy</strong> (prefix first, then fuzzy if needed, then fallback suggestions).
+      </p>
+      <div class="input-row">
+        <input id="q" type="text" placeholder="Try: aple / renovaton / king street / feild / zzzz" />
+        <button class="btn" id="clearBtn">Clear</button>
+      </div>
+      <div class="chips">
+        <button class="chip" data-q="aple">Typo: aple</button>
+        <button class="chip" data-q="renovaton">Typo: renovaton</button>
+        <button class="chip" data-q="king street">Address: king street</button>
+        <button class="chip" data-q="feild">Typo: feild</button>
+        <button class="chip" data-q="zzzz">No result: zzzz</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <header>
+          <h2>Current Logic</h2>
+          <span class="badge b-old">Prefix only</span>
+        </header>
+        <div class="meta" id="oldMeta"></div>
+        <div class="flow" id="oldFlow"></div>
+        <ul class="result" id="oldList"></ul>
+      </article>
+
+      <article class="panel">
+        <header>
+          <h2>Optimized Logic</h2>
+          <span class="badge b-new">Layered + Fallback</span>
+        </header>
+        <div class="meta" id="newMeta"></div>
+        <div class="flow" id="newFlow"></div>
+        <ul class="result" id="newList"></ul>
+      </article>
+    </section>
+
+    <section class="legend">
+      <strong>Optimization Flow:</strong><br />
+      1) Exact prefix match first.<br />
+      2) If no result and query length &gt;= 4, run fuzzy match.<br />
+      3) If still empty, show fallback: recently visited + recently updated projects.
+    </section>
+
+    <section class="legend" style="margin-top:12px;">
+      <strong>Full Project Bank (demo data)</strong><br />
+      <span style="color:#9fb0dc;">This list is the source dataset used by both current and optimized search logic.</span>
+      <ul id="projectBankList" class="result" style="max-height:340px; margin-top:10px;"></ul>
+    </section>
+  </div>
+
+  <script>
+    const PROJECTS = [
+      { name: "Apple Park Renovation", address: "1 Infinite Loop, Cupertino", lastVisited: 9, lastUpdated: 2 },
+      { name: "Apple Center Upgrade", address: "116 King St, San Francisco", lastVisited: 2, lastUpdated: 6 },
+      { name: "Apollo Tower Retrofit", address: "200 King Street, Seattle", lastVisited: 15, lastUpdated: 1 },
+      { name: "Downtown Office Expansion", address: "88 Market Ave, Austin", lastVisited: 1, lastUpdated: 3 },
+      { name: "Westfield Mall Retrofit", address: "450 Main Road, Phoenix", lastVisited: 5, lastUpdated: 7 },
+      { name: "Field Service Warehouse East", address: "9 Industrial Blvd, Dallas", lastVisited: 4, lastUpdated: 9 },
+      { name: "Loomis School Renovation", address: "73 River Lane, Denver", lastVisited: 20, lastUpdated: 11 },
+      { name: "Riverfront Pump Station", address: "12 Harbor St, Portland", lastVisited: 3, lastUpdated: 8 },
+      { name: "North Ridge Apartments", address: "51 Maple Drive, Atlanta", lastVisited: 30, lastUpdated: 12 },
+      { name: "King St Facade Repair", address: "116 King St, San Francisco", lastVisited: 6, lastUpdated: 4 },
+      { name: "King Street Parking Deck", address: "118 King Street, San Francisco", lastVisited: 7, lastUpdated: 5 },
+      { name: "Renovation Phase 2", address: "44 Bay Rd, Miami", lastVisited: 14, lastUpdated: 10 },
+      { name: "Reno Valley Site A", address: "501 Sunset Avenue, Reno", lastVisited: 25, lastUpdated: 13 },
+      { name: "Harbor View Condo Tower", address: "9 Ocean Blvd, Miami", lastVisited: 8, lastUpdated: 14 },
+      { name: "Boulevard Transit Hub", address: "5 Grand Boulevard, Chicago", lastVisited: 17, lastUpdated: 15 },
+      { name: "Avenue 9 Mixed Use", address: "9th Avenue, New York", lastVisited: 12, lastUpdated: 16 },
+      { name: "Road 7 Utility Corridor", address: "7 Long Road, Boston", lastVisited: 21, lastUpdated: 17 },
+      { name: "South Yard Crane Base", address: "300 Port St, Newark", lastVisited: 26, lastUpdated: 18 },
+      { name: "Maple Court Drain Upgrade", address: "22 Maple Ct, Atlanta", lastVisited: 11, lastUpdated: 19 },
+      { name: "Elm Drive Lighting Works", address: "3 Elm Dr, Denver", lastVisited: 10, lastUpdated: 20 },
+      { name: "Hilltop School Gym", address: "95 Cedar Place, Austin", lastVisited: 22, lastUpdated: 21 },
+      { name: "Bridgewater Retaining Wall", address: "1 Bridge St, Portland", lastVisited: 16, lastUpdated: 22 },
+      { name: "Warehouse 12 Roof", address: "12 Commerce Ave, Dallas", lastVisited: 18, lastUpdated: 23 },
+      { name: "Riverside Drain Channel", address: "402 King St, Austin", lastVisited: 13, lastUpdated: 24 },
+      { name: "Loom Center Mechanical", address: "209 Fabric Road, Seattle", lastVisited: 24, lastUpdated: 25 },
+    ];
+
+    // Add additional simulated projects to mimic large team lists.
+    const EXTRA_WORDS = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Gamma", "Helix"];
+    for (let i = 0; i < 40; i++) {
+      PROJECTS.push({
+        name: `Project ${EXTRA_WORDS[i % EXTRA_WORDS.length]} ${100 + i}`,
+        address: `${100 + i} King St, City ${i % 9}`,
+        lastVisited: 40 + i,
+        lastUpdated: 40 + (40 - i),
+      });
+    }
+
+    const qInput = document.getElementById("q");
+    const oldList = document.getElementById("oldList");
+    const newList = document.getElementById("newList");
+    const oldMeta = document.getElementById("oldMeta");
+    const newMeta = document.getElementById("newMeta");
+    const oldFlow = document.getElementById("oldFlow");
+    const newFlow = document.getElementById("newFlow");
+    const projectBankList = document.getElementById("projectBankList");
+
+    function normalize(s) {
+      return String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
+    }
+
+    function normalizeAddress(s) {
+      return normalize(s)
+        .replace(/\bstreet\b/g, "st")
+        .replace(/\bavenue\b/g, "ave")
+        .replace(/\bboulevard\b/g, "blvd")
+        .replace(/\broad\b/g, "rd")
+        .replace(/\bdrive\b/g, "dr")
+        .replace(/\bcourt\b/g, "ct")
+        .replace(/\blane\b/g, "ln");
+    }
+
+    function tokenize(text) {
+      return normalize(text).split(/[^a-z0-9]+/).filter(Boolean);
+    }
+
+    // Prefix hit on any token in project name.
+    function prefixSearch(projects, q) {
+      const query = normalize(q);
+      if (!query) return [];
+      return projects.filter((p) => {
+        const tokens = tokenize(p.name);
+        return tokens.some((t) => t.startsWith(query));
+      });
+    }
+
+    // Simple Levenshtein implementation.
+    function levenshtein(a, b) {
+      const m = a.length;
+      const n = b.length;
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + cost
+          );
+        }
+      }
+      return dp[m][n];
+    }
+
+    function fuzzySearch(projects, q) {
+      const query = normalize(q);
+      if (!query || query.length < 4) return [];
+      const out = [];
+      projects.forEach((p) => {
+        const nameTokens = tokenize(p.name);
+        let best = 999;
+        for (const token of nameTokens) {
+          const d = levenshtein(query, token);
+          if (d < best) best = d;
+        }
+        // Dynamic threshold by query length.
+        const allow = query.length >= 8 ? 2 : 1;
+        if (best <= allow) out.push({ project: p, score: best });
+      });
+      return out.sort((a, b) => a.score - b.score).slice(0, 8);
+    }
+
+    function hasDigit(s) {
+      return /\d/.test(s);
+    }
+
+    function addressSearch(projects, q) {
+      const query = normalizeAddress(q);
+      if (!query) return [];
+
+      // Guardrails: do not run loose address search for very short generic queries.
+      // This avoids false positives like "all" matching "dallas".
+      if (query.length < 4 && !hasDigit(query)) return [];
+
+      const qTokens = query.split(/\s+/).filter(Boolean);
+      return projects.filter((p) => {
+        const aTokens = normalizeAddress(p.address).split(/[^a-z0-9]+/).filter(Boolean);
+
+        // Case 1: single token -> token-prefix only (no mid-word contains)
+        if (qTokens.length === 1) {
+          const qt = qTokens[0];
+          return aTokens.some((t) => t.startsWith(qt));
+        }
+
+        // Case 2: multi-token -> every query token must prefix-match at least one address token.
+        return qTokens.every((qt) => aTokens.some((at) => at.startsWith(qt)));
+      });
+    }
+
+    function uniqueByName(items) {
+      const seen = new Set();
+      const out = [];
+      for (const item of items) {
+        const p = item.project || item;
+        if (!seen.has(p.name)) {
+          seen.add(p.name);
+          out.push(item);
+        }
+      }
+      return out;
+    }
+
+    function renderItems(el, items, opts = {}) {
+      el.innerHTML = "";
+      if (!items.length) return;
+      items.forEach((entry) => {
+        const p = entry.project || entry;
+        const li = document.createElement("li");
+        li.className = "item";
+        li.innerHTML = `
+          <div class="name">${p.name}</div>
+          <div class="sub">
+            <span>Address: ${p.address}</span>
+            <span>Recent Visit Rank: ${p.lastVisited}</span>
+            <span>Recent Update Rank: ${p.lastUpdated}</span>
+          </div>
+          ${entry.hint ? `<div class="hint">${entry.hint}</div>` : ""}
+        `;
+        el.appendChild(li);
+      });
+    }
+
+    function renderEmpty(el, html) {
+      el.innerHTML = `<div class="empty">${html}</div>`;
+    }
+
+    function searchCurrent(query) {
+      if (!normalize(query)) {
+        return { mode: "idle", results: [] };
+      }
+      const results = prefixSearch(PROJECTS, query).slice(0, 12);
+      return { mode: "prefix-only", results };
+    }
+
+    function searchOptimized(query) {
+      const q = normalize(query);
+      if (!q) return { mode: "idle", results: [], notes: [], flow: {} };
+
+      // Layer 1: Prefix on project names.
+      const prefixHits = prefixSearch(PROJECTS, q).map((p) => ({ project: p }));
+      if (prefixHits.length) {
+        return {
+          mode: "prefix-hit",
+          results: prefixHits.slice(0, 12),
+          notes: ["Prefix match hit. No fuzzy needed."],
+          flow: { prefix: "success", address: "muted", fuzzy: "muted", fallback: "muted" },
+        };
+      }
+
+      // Layer 2: Address search.
+      const addrHits = addressSearch(PROJECTS, q).map((p) => ({
+        project: p,
+        hint: "Matched by address normalization",
+      }));
+      if (addrHits.length) {
+        return {
+          mode: "address-hit",
+          results: addrHits.slice(0, 12),
+          notes: ["No name hit. Address index hit."],
+          flow: { prefix: "fail", address: "success", fuzzy: "muted", fallback: "muted" },
+        };
+      }
+
+      // Layer 3: Fuzzy (only when q length >= 4).
+      const fuzzyHits = fuzzySearch(PROJECTS, q).map((x) => ({
+        project: x.project,
+        hint: `Did you mean this? (distance: ${x.score})`,
+      }));
+      if (fuzzyHits.length) {
+        return {
+          mode: "fuzzy-hit",
+          results: fuzzyHits,
+          notes: ["Prefix and address failed, fuzzy triggered (len >= 4)."],
+          flow: { prefix: "fail", address: "fail", fuzzy: "success", fallback: "muted" },
+        };
+      }
+
+      // Layer 4: fallback suggestions.
+      const recentVisited = [...PROJECTS]
+        .sort((a, b) => a.lastVisited - b.lastVisited)
+        .slice(0, 3)
+        .map((p) => ({ project: p, hint: "Recently visited" }));
+
+      const recentUpdated = [...PROJECTS]
+        .sort((a, b) => a.lastUpdated - b.lastUpdated)
+        .slice(0, 2)
+        .map((p) => ({ project: p, hint: "Recently updated" }));
+
+      return {
+        mode: "fallback",
+        results: uniqueByName([...recentVisited, ...recentUpdated]).slice(0, 5),
+        notes: ["No exact / address / fuzzy hit. Showing fast fallback list."],
+        flow: { prefix: "fail", address: "fail", fuzzy: q.length >= 4 ? "fail" : "muted", fallback: "success" },
+      };
+    }
+
+    function renderFlow(container, steps) {
+      container.innerHTML = "";
+      steps.forEach((s) => {
+        const div = document.createElement("div");
+        const cls = s.state ? `flow-step ${s.state}` : "flow-step muted";
+        div.className = cls;
+        div.innerHTML = `<span>${s.label}</span><span class="status">${s.status}</span>`;
+        container.appendChild(div);
+      });
+    }
+
+    function updateUI() {
+      const q = qInput.value;
+
+      // Current
+      const oldState = searchCurrent(q);
+      oldMeta.textContent = oldState.mode === "idle"
+        ? "Type to start searching."
+        : `Mode: ${oldState.mode} • Results: ${oldState.results.length}`;
+
+      if (oldState.mode === "idle") {
+        oldList.innerHTML = "";
+        renderEmpty(oldList, "Current logic waits for input.");
+        renderFlow(oldFlow, [
+          { label: "1) Prefix Match", status: "IDLE", state: "muted" },
+          { label: "2) No Result", status: "IDLE", state: "muted" },
+        ]);
+      } else if (!oldState.results.length) {
+        renderEmpty(oldList, `No results found for "<strong>${q}</strong>".<br/>Only action: create new project.`);
+        renderFlow(oldFlow, [
+          { label: "1) Prefix Match", status: "NO HIT", state: "fail" },
+          { label: "2) No Result", status: "DEAD END", state: "fail" },
+        ]);
+      } else {
+        renderItems(oldList, oldState.results);
+        renderFlow(oldFlow, [
+          { label: "1) Prefix Match", status: "HIT", state: "success" },
+          { label: "2) Show Results", status: "DONE", state: "success" },
+        ]);
+      }
+
+      // Optimized
+      const newState = searchOptimized(q);
+      newMeta.textContent = newState.mode === "idle"
+        ? "Type to start searching."
+        : `Mode: ${newState.mode} • Results: ${newState.results.length} • ${newState.notes.join(" ")}`;
+
+      if (newState.mode === "idle") {
+        newList.innerHTML = "";
+        renderEmpty(newList, "Optimized logic waits for input.");
+        renderFlow(newFlow, [
+          { label: "1) Prefix Match", status: "IDLE", state: "muted" },
+          { label: "2) Address Index", status: "IDLE", state: "muted" },
+          { label: "3) Fuzzy Match", status: "IDLE", state: "muted" },
+          { label: "4) Fallback", status: "IDLE", state: "muted" },
+        ]);
+      } else if (!newState.results.length) {
+        renderEmpty(newList, `No results for "<strong>${q}</strong>".`);
+        renderFlow(newFlow, [
+          { label: "1) Prefix Match", status: "NO HIT", state: "fail" },
+          { label: "2) Address Index", status: "NO HIT", state: "fail" },
+          { label: "3) Fuzzy Match", status: "NO HIT", state: "fail" },
+          { label: "4) Fallback", status: "NO HIT", state: "fail" },
+        ]);
+      } else {
+        renderItems(newList, newState.results);
+        const f = newState.flow || {};
+        const getStatus = (k) => (f[k] === "success" ? "HIT" : f[k] === "fail" ? "NO HIT" : "SKIP");
+        renderFlow(newFlow, [
+          { label: "1) Prefix Match", status: getStatus("prefix"), state: f.prefix || "muted" },
+          { label: "2) Address Index", status: getStatus("address"), state: f.address || "muted" },
+          { label: "3) Fuzzy Match", status: getStatus("fuzzy"), state: f.fuzzy || "muted" },
+          { label: "4) Fallback", status: getStatus("fallback"), state: f.fallback || "muted" },
+        ]);
+      }
+    }
+
+    function renderProjectBank() {
+      const sorted = [...PROJECTS].sort((a, b) => a.name.localeCompare(b.name));
+      projectBankList.innerHTML = "";
+      sorted.forEach((p, idx) => {
+        const li = document.createElement("li");
+        li.className = "item";
+        li.innerHTML = `
+          <div class="name">${idx + 1}. ${p.name}</div>
+          <div class="sub">
+            <span>Address: ${p.address}</span>
+            <span>Recent Visit Rank: ${p.lastVisited}</span>
+            <span>Recent Update Rank: ${p.lastUpdated}</span>
+          </div>
+        `;
+        projectBankList.appendChild(li);
+      });
+    }
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      qInput.value = "";
+      updateUI();
+      qInput.focus();
+    });
+
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        qInput.value = chip.dataset.q || "";
+        updateUI();
+      });
+    });
+
+    // Simple debounce for realistic local compute behavior.
+    let t = null;
+    qInput.addEventListener("input", () => {
+      clearTimeout(t);
+      t = setTimeout(updateUI, 180);
+    });
+
+    renderProjectBank();
+    updateUI();
+  </script>
+</body>
+</html>
