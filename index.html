@@ -501,15 +501,45 @@
     function searchOptimized(query) {
       const q = normalize(query);
       if (!q) return { mode: "idle", results: [], notes: [], flow: {} };
+      const rawTokens = q.split(/[^a-z0-9]+/).filter(Boolean);
+      const hasRoadToken = rawTokens.some((t) => ADDRESS_CANON[t]);
 
       // Layer 1: Prefix on project names.
       const prefixHits = prefixSearch(PROJECTS, q).map((p) => ({ project: p }));
-      if (prefixHits.length) {
+      if (prefixHits.length && !hasRoadToken) {
         return {
           mode: "prefix-hit",
           results: prefixHits.slice(0, 12),
           notes: ["Prefix match hit. No fuzzy needed."],
           flow: { prefix: "success", address: "muted", fuzzy: "muted", fallback: "muted" },
+        };
+      }
+
+      // For road-token queries (e.g., ave/st/blvd), merge prefix + address results
+      // so users can see both project-name matches and address matches.
+      if (prefixHits.length && hasRoadToken) {
+        const addrState = addressSearch(PROJECTS, q);
+        const addrHits = addrState.hits.map((p) => ({
+          project: p,
+          hint: "Matched by address projection",
+        }));
+        const merged = uniqueByName([...prefixHits, ...addrHits]).slice(0, 12);
+        const notes = [
+          "Road-token query: merged project-name prefix + address index results.",
+        ];
+        if (addrState.projectionUsed) {
+          notes.push("Projection used (e.g., ave <-> avenue, blvd <-> boulevard).");
+        }
+        return {
+          mode: "prefix+address-hit",
+          results: merged,
+          notes,
+          flow: {
+            prefix: "success",
+            address: addrHits.length ? "success" : "fail",
+            fuzzy: "muted",
+            fallback: "muted",
+          },
         };
       }
 
