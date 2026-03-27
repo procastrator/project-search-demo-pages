@@ -354,8 +354,8 @@
       });
     }
 
-    // Simple Levenshtein implementation.
-    function levenshtein(a, b) {
+    // Damerau-Levenshtein: handles adjacent transposition typos (e.g., feild -> field).
+    function damerauLevenshtein(a, b) {
       const m = a.length;
       const n = b.length;
       const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
@@ -364,11 +364,21 @@
       for (let i = 1; i <= m; i++) {
         for (let j = 1; j <= n; j++) {
           const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-          dp[i][j] = Math.min(
+          let best = Math.min(
             dp[i - 1][j] + 1,
             dp[i][j - 1] + 1,
             dp[i - 1][j - 1] + cost
           );
+          // Adjacent transposition
+          if (
+            i > 1 &&
+            j > 1 &&
+            a[i - 1] === b[j - 2] &&
+            a[i - 2] === b[j - 1]
+          ) {
+            best = Math.min(best, dp[i - 2][j - 2] + 1);
+          }
+          dp[i][j] = best;
         }
       }
       return dp[m][n];
@@ -382,7 +392,7 @@
         const nameTokens = tokenize(p.name);
         let best = 999;
         for (const token of nameTokens) {
-          const d = levenshtein(query, token);
+          const d = damerauLevenshtein(query, token);
           if (d < best) best = d;
         }
         // Dynamic threshold by query length.
