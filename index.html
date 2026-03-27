@@ -270,6 +270,54 @@
     </section>
 
     <section class="legend" style="margin-top:12px;">
+      <strong>Detailed Decision Policy (when layers combine vs when they do not)</strong><br />
+      <span style="color:#9fb0dc;">
+        This is the exact policy used by the optimized panel. It is deterministic and query-type based.
+      </span>
+      <div style="margin-top:8px;">
+        <strong>A) Road-token query (combine Prefix + Address)</strong><br />
+        Trigger if query contains a recognized road token:
+        <code>st/street, ave/avenue, blvd/boulevard, rd/road, dr/drive, ct/court, ln/lane</code>.<br />
+        Behavior:
+        <ul style="margin:6px 0 8px 18px; padding:0;">
+          <li>Run <strong>Name Prefix</strong> and <strong>Address Index</strong> together</li>
+          <li>Merge + dedupe results</li>
+          <li>Show reminder: projection used (<code>ave &lt;-&gt; avenue</code>, etc.)</li>
+        </ul>
+      </div>
+      <div style="margin-top:6px;">
+        <strong>B) Non-road query (precision-first, no early combine)</strong><br />
+        Examples: <code>apple</code>, <code>field</code>, <code>renovaton</code><br />
+        Behavior:
+        <ul style="margin:6px 0 8px 18px; padding:0;">
+          <li>Step 1: Name Prefix first</li>
+          <li>If Step 1 hits, <strong>stop</strong> (address not executed)</li>
+          <li>If Step 1 misses, run Address Index</li>
+          <li>If still no hit and query length &gt;= 4, run Fuzzy (Damerau-Levenshtein)</li>
+          <li>If still no hit, show Fallback (recently visited + recently updated)</li>
+        </ul>
+      </div>
+      <div style="margin-top:6px;">
+        <strong>C) Why this split exists</strong>
+        <ul style="margin:6px 0 8px 18px; padding:0;">
+          <li>Road tokens are ambiguous and valid in both names and addresses, so combine is required.</li>
+          <li>General text queries are usually high-precision on names; early combine would add noise.</li>
+          <li>This keeps precision high while preserving recall for address-style queries.</li>
+        </ul>
+      </div>
+      <div style="margin-top:6px;">
+        <strong>Quick examples</strong><br />
+        <ul style="margin:6px 0 0 18px; padding:0;">
+          <li><code>apple</code> - Prefix only (if hit), Address skipped</li>
+          <li><code>ave</code> - Prefix + Address combined</li>
+          <li><code>king street</code> - Address projection path</li>
+          <li><code>feild</code> - Prefix miss -> Fuzzy hit (transposition typo)</li>
+          <li><code>zzzz</code> - all miss -> Fallback list</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="legend" style="margin-top:12px;">
       <strong>Full Project Bank (demo data)</strong><br />
       <span style="color:#9fb0dc;">This list is the source dataset used by both current and optimized search logic.</span>
       <ul id="projectBankList" class="result" style="max-height:340px; margin-top:10px;"></ul>
