@@ -606,11 +606,36 @@
       // Layer 1: Name-token match on project names.
       const prefixHits = nameTokenSearch(PROJECTS, q).map((p) => ({ project: p }));
       if (prefixHits.length && !hasRoadToken) {
+        // Frequent real-world case:
+        // user query has valid hits, but there may also be typo-near projects.
+        // Add a small fuzzy supplement (top 2) as "Did you mean" candidates.
+        const fuzzySupplement = q.length >= 4
+          ? fuzzySearch(PROJECTS, q)
+              .filter((x) => !prefixHits.some((h) => h.project.name === x.project.name))
+              .slice(0, 2)
+              .map((x) => ({
+                project: x.project,
+                hint: `Did you mean this? (distance: ${x.score})`,
+              }))
+          : [];
+
+        const merged = uniqueByName([...prefixHits, ...fuzzySupplement]).slice(0, 12);
+        const notes = ["Name-token match hit."];
+        if (fuzzySupplement.length) {
+          notes.push(`Added ${fuzzySupplement.length} fuzzy suggestion(s) for typo tolerance.`);
+        } else {
+          notes.push("No fuzzy supplement needed.");
+        }
         return {
           mode: "prefix-hit",
-          results: prefixHits.slice(0, 12),
-          notes: ["Name-token match hit. No fuzzy needed."],
-          flow: { prefix: "success", address: "muted", fuzzy: "muted", fallback: "muted" },
+          results: merged,
+          notes,
+          flow: {
+            prefix: "success",
+            address: "muted",
+            fuzzy: fuzzySupplement.length ? "success" : "muted",
+            fallback: "muted",
+          },
         };
       }
 
