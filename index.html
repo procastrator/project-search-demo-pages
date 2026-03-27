@@ -329,15 +329,32 @@
       return String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
     }
 
-    function normalizeAddress(s) {
+    const ADDRESS_CANON = {
+      st: "street",
+      street: "street",
+      ave: "avenue",
+      avenue: "avenue",
+      blvd: "boulevard",
+      boulevard: "boulevard",
+      rd: "road",
+      road: "road",
+      dr: "drive",
+      drive: "drive",
+      ct: "court",
+      court: "court",
+      ln: "lane",
+      lane: "lane",
+    };
+
+    function canonicalAddressToken(t) {
+      return ADDRESS_CANON[t] || t;
+    }
+
+    function normalizeAddressTokens(s) {
       return normalize(s)
-        .replace(/\bstreet\b/g, "st")
-        .replace(/\bavenue\b/g, "ave")
-        .replace(/\bboulevard\b/g, "blvd")
-        .replace(/\broad\b/g, "rd")
-        .replace(/\bdrive\b/g, "dr")
-        .replace(/\bcourt\b/g, "ct")
-        .replace(/\blane\b/g, "ln");
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean)
+        .map(canonicalAddressToken);
     }
 
     function tokenize(text) {
@@ -407,16 +424,19 @@
     }
 
     function addressSearch(projects, q) {
-      const query = normalizeAddress(q);
-      if (!query) return [];
+      const rawTokens = normalize(q).split(/[^a-z0-9]+/).filter(Boolean);
+      const qTokens = rawTokens.map(canonicalAddressToken);
+      if (!qTokens.length) return { hits: [], projectionUsed: false };
 
       // Guardrails: do not run loose address search for very short generic queries.
       // This avoids false positives like "all" matching "dallas".
-      if (query.length < 4 && !hasDigit(query)) return [];
+      const joined = qTokens.join(" ");
+      if (joined.length < 4 && !hasDigit(joined)) return { hits: [], projectionUsed: false };
 
-      const qTokens = query.split(/\s+/).filter(Boolean);
-      return projects.filter((p) => {
-        const aTokens = normalizeAddress(p.address).split(/[^a-z0-9]+/).filter(Boolean);
+      const projectionUsed = rawTokens.some((t) => ADDRESS_CANON[t]);
+
+      const hits = projects.filter((p) => {
+        const aTokens = normalizeAddressTokens(p.address);
 
         // Case 1: single token -> token-prefix only (no mid-word contains)
         if (qTokens.length === 1) {
@@ -427,6 +447,7 @@
         // Case 2: multi-token -> every query token must prefix-match at least one address token.
         return qTokens.every((qt) => aTokens.some((at) => at.startsWith(qt)));
       });
+      return { hits, projectionUsed };
     }
 
     function uniqueByName(items) {
@@ -490,15 +511,20 @@
       }
 
       // Layer 2: Address search.
-      const addrHits = addressSearch(PROJECTS, q).map((p) => ({
+      const addrState = addressSearch(PROJECTS, q);
+      const addrHits = addrState.hits.map((p) => ({
         project: p,
         hint: "Matched by address normalization",
       }));
       if (addrHits.length) {
+        const notes = ["No name hit. Address index hit."];
+        if (addrState.projectionUsed) {
+          notes.push("Projection used (e.g., ave <-> avenue, blvd <-> boulevard).");
+        }
         return {
           mode: "address-hit",
           results: addrHits.slice(0, 12),
-          notes: ["No name hit. Address index hit."],
+          notes,
           flow: { prefix: "fail", address: "success", fuzzy: "muted", fallback: "muted" },
         };
       }
