@@ -429,9 +429,12 @@
       if (!qTokens.length) return { hits: [], projectionUsed: false };
 
       // Guardrails: do not run loose address search for very short generic queries.
-      // This avoids false positives like "all" matching "dallas".
+      // But allow known road-type tokens (e.g., ave/st/rd/blvd) even when short.
       const joined = qTokens.join(" ");
-      if (joined.length < 4 && !hasDigit(joined)) return { hits: [], projectionUsed: false };
+      const hasRoadToken = rawTokens.some((t) => ADDRESS_CANON[t]);
+      if (joined.length < 4 && !hasDigit(joined) && !hasRoadToken) {
+        return { hits: [], projectionUsed: false };
+      }
 
       const projectionUsed = rawTokens.some((t) => ADDRESS_CANON[t]);
 
