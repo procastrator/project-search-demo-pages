@@ -255,8 +255,8 @@
     <section class="hero">
       <h1>Project Search Demo: Current vs Optimized</h1>
       <p>
-        Type in the search box to compare <strong>current prefix-only search</strong> with an
-        <strong>optimized layered strategy</strong> (prefix first, then fuzzy if needed, then fallback suggestions).
+        Type in the search box to compare <strong>current name-token search</strong> with an
+        <strong>optimized layered strategy</strong> (name match first, then fuzzy if needed, then fallback suggestions).
       </p>
       <div class="input-row">
         <input id="q" type="text" placeholder="Try: aple / renovaton / king street / feild / zzzz" />
@@ -288,7 +288,7 @@
       <article class="panel">
         <header>
           <h2>Current Logic</h2>
-          <span class="badge b-old">Prefix only</span>
+          <span class="badge b-old">Name token match</span>
         </header>
         <div class="meta" id="oldMeta"></div>
         <div class="flow" id="oldFlow"></div>
@@ -308,7 +308,7 @@
 
     <section class="legend">
       <strong>Optimization Flow:</strong><br />
-      1) Exact prefix match first.<br />
+      1) Name-token match first (<code>contains</code> within each token).<br />
       2) If no result and query length &gt;= 4, run fuzzy match.<br />
       3) If still empty, show fallback: recently visited + recently updated projects.
     </section>
@@ -319,12 +319,12 @@
         This is the exact policy used by the optimized panel. It is deterministic and query-type based.
       </span>
       <div style="margin-top:8px;">
-        <strong>A) Road-token query (combine Prefix + Address)</strong><br />
+        <strong>A) Road-token query (combine Name Match + Address)</strong><br />
         Trigger if query contains a recognized road token:
         <code>st/street, ave/avenue, blvd/boulevard, rd/road, dr/drive, ct/court, ln/lane</code>.<br />
         Behavior:
         <ul style="margin:6px 0 8px 18px; padding:0;">
-          <li>Run <strong>Name Prefix</strong> and <strong>Address Index</strong> together</li>
+          <li>Run <strong>Name Token Match</strong> and <strong>Address Index</strong> together</li>
           <li>Merge + dedupe results</li>
           <li>Show reminder: projection used (<code>ave &lt;-&gt; avenue</code>, etc.)</li>
         </ul>
@@ -334,7 +334,7 @@
         Examples: <code>apple</code>, <code>field</code>, <code>renovaton</code><br />
         Behavior:
         <ul style="margin:6px 0 8px 18px; padding:0;">
-          <li>Step 1: Name Prefix first</li>
+          <li>Step 1: Name Token Match first</li>
           <li>If Step 1 hits, <strong>stop</strong> (address not executed)</li>
           <li>If Step 1 misses, run Address Index</li>
           <li>If still no hit and query length &gt;= 4, run Fuzzy (Damerau-Levenshtein)</li>
@@ -352,10 +352,11 @@
       <div style="margin-top:6px;">
         <strong>Quick examples</strong><br />
         <ul style="margin:6px 0 0 18px; padding:0;">
-          <li><code>apple</code> - Prefix only (if hit), Address skipped</li>
-          <li><code>ave</code> - Prefix + Address combined</li>
+          <li><code>apple</code> - Name token hit (if hit), Address skipped</li>
+          <li><code>ave</code> - Name + Address combined</li>
+          <li><code>tro</code> - Name token hit in <code>retrofit</code></li>
           <li><code>king street</code> - Address projection path</li>
-          <li><code>feild</code> - Prefix miss -> Fuzzy hit (transposition typo)</li>
+          <li><code>feild</code> - Name miss -> Fuzzy hit (transposition typo)</li>
           <li><code>zzzz</code> - all miss -> Fallback list</li>
         </ul>
       </div>
@@ -458,13 +459,14 @@
       return normalize(text).split(/[^a-z0-9]+/).filter(Boolean);
     }
 
-    // Prefix hit on any token in project name.
-    function prefixSearch(projects, q) {
+    // Name-token match: query can match any substring within each name token.
+    // Example: "tro" matches token "retrofit".
+    function nameTokenSearch(projects, q) {
       const query = normalize(q);
       if (!query) return [];
       return projects.filter((p) => {
         const tokens = tokenize(p.name);
-        return tokens.some((t) => t.startsWith(query));
+        return tokens.some((t) => t.includes(query));
       });
     }
 
@@ -591,8 +593,8 @@
       if (!normalize(query)) {
         return { mode: "idle", results: [] };
       }
-      const results = prefixSearch(PROJECTS, query).slice(0, 12);
-      return { mode: "prefix-only", results };
+      const results = nameTokenSearch(PROJECTS, query).slice(0, 12);
+      return { mode: "name-match-only", results };
     }
 
     function searchOptimized(query) {
@@ -601,13 +603,13 @@
       const rawTokens = q.split(/[^a-z0-9]+/).filter(Boolean);
       const hasRoadToken = rawTokens.some((t) => ADDRESS_CANON[t]);
 
-      // Layer 1: Prefix on project names.
-      const prefixHits = prefixSearch(PROJECTS, q).map((p) => ({ project: p }));
+      // Layer 1: Name-token match on project names.
+      const prefixHits = nameTokenSearch(PROJECTS, q).map((p) => ({ project: p }));
       if (prefixHits.length && !hasRoadToken) {
         return {
           mode: "prefix-hit",
           results: prefixHits.slice(0, 12),
-          notes: ["Prefix match hit. No fuzzy needed."],
+          notes: ["Name-token match hit. No fuzzy needed."],
           flow: { prefix: "success", address: "muted", fuzzy: "muted", fallback: "muted" },
         };
       }
@@ -622,7 +624,7 @@
         }));
         const merged = uniqueByName([...prefixHits, ...addrHits]).slice(0, 12);
         const notes = [
-          "Road-token query: merged project-name prefix + address index results.",
+            "Road-token query: merged name-token match + address index results.",
         ];
         if (addrState.projectionUsed) {
           notes.push("Projection used (e.g., ave <-> avenue, blvd <-> boulevard).");
@@ -668,7 +670,7 @@
         return {
           mode: "fuzzy-hit",
           results: fuzzyHits,
-          notes: ["Prefix and address failed, fuzzy triggered (len >= 4)."],
+          notes: ["Name-token and address failed, fuzzy triggered (len >= 4)."],
           flow: { prefix: "fail", address: "fail", fuzzy: "success", fallback: "muted" },
         };
       }
@@ -716,19 +718,19 @@
         oldList.innerHTML = "";
         renderEmpty(oldList, "Current logic waits for input.");
         renderFlow(oldFlow, [
-          { label: "1) Prefix Match", status: "IDLE", state: "muted" },
+          { label: "1) Name Match", status: "IDLE", state: "muted" },
           { label: "2) No Result", status: "IDLE", state: "muted" },
         ]);
       } else if (!oldState.results.length) {
         renderEmpty(oldList, `No results found for "<strong>${q}</strong>".<br/>Only action: create new project.`);
         renderFlow(oldFlow, [
-          { label: "1) Prefix Match", status: "NO HIT", state: "fail" },
+          { label: "1) Name Match", status: "NO HIT", state: "fail" },
           { label: "2) No Result", status: "DEAD END", state: "fail" },
         ]);
       } else {
         renderItems(oldList, oldState.results);
         renderFlow(oldFlow, [
-          { label: "1) Prefix Match", status: "HIT", state: "success" },
+          { label: "1) Name Match", status: "HIT", state: "success" },
           { label: "2) Show Results", status: "DONE", state: "success" },
         ]);
       }
@@ -743,7 +745,7 @@
         newList.innerHTML = "";
         renderEmpty(newList, "Optimized logic waits for input.");
         renderFlow(newFlow, [
-          { label: "1) Prefix Match", status: "IDLE", state: "muted" },
+          { label: "1) Name Match", status: "IDLE", state: "muted" },
           { label: "2) Address Index", status: "IDLE", state: "muted" },
           { label: "3) Fuzzy Match", status: "IDLE", state: "muted" },
           { label: "4) Fallback", status: "IDLE", state: "muted" },
@@ -751,7 +753,7 @@
       } else if (!newState.results.length) {
         renderEmpty(newList, `No results for "<strong>${q}</strong>".`);
         renderFlow(newFlow, [
-          { label: "1) Prefix Match", status: "NO HIT", state: "fail" },
+          { label: "1) Name Match", status: "NO HIT", state: "fail" },
           { label: "2) Address Index", status: "NO HIT", state: "fail" },
           { label: "3) Fuzzy Match", status: "NO HIT", state: "fail" },
           { label: "4) Fallback", status: "NO HIT", state: "fail" },
@@ -761,7 +763,7 @@
         const f = newState.flow || {};
         const getStatus = (k) => (f[k] === "success" ? "HIT" : f[k] === "fail" ? "NO HIT" : "SKIP");
         renderFlow(newFlow, [
-          { label: "1) Prefix Match", status: getStatus("prefix"), state: f.prefix || "muted" },
+          { label: "1) Name Match", status: getStatus("prefix"), state: f.prefix || "muted" },
           { label: "2) Address Index", status: getStatus("address"), state: f.address || "muted" },
           { label: "3) Fuzzy Match", status: getStatus("fuzzy"), state: f.fuzzy || "muted" },
           { label: "4) Fallback", status: getStatus("fallback"), state: f.fallback || "muted" },
