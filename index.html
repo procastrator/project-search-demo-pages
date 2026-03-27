@@ -84,6 +84,37 @@
       font-size: 12px;
       cursor: pointer;
     }
+    .adder {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #0f1731;
+      padding: 10px;
+    }
+    .adder h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: #dbe6ff;
+    }
+    .adder-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1.2fr 0.7fr 0.7fr auto;
+      gap: 8px;
+    }
+    .adder-grid input {
+      background: #0b1330;
+      color: var(--text);
+      border: 1px solid #2d3e72;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      min-width: 0;
+    }
+    .adder-note {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #9fb0dc;
+    }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -238,6 +269,19 @@
         <button class="chip" data-q="feild">Typo: feild</button>
         <button class="chip" data-q="zzzz">No result: zzzz</button>
       </div>
+      <div class="adder">
+        <h3>Add Project in Real Time</h3>
+        <div class="adder-grid">
+          <input id="addName" type="text" placeholder="Project name (required)" />
+          <input id="addAddress" type="text" placeholder="Address (required)" />
+          <input id="addVisit" type="number" min="1" placeholder="Visit rank" />
+          <input id="addUpdate" type="number" min="1" placeholder="Update rank" />
+          <button class="btn" id="addProjectBtn">Add</button>
+        </div>
+        <div class="adder-note">
+          Added projects are immediately searchable and shown in Full Project Bank.
+        </div>
+      </div>
     </section>
 
     <section class="grid">
@@ -372,6 +416,11 @@
     const oldFlow = document.getElementById("oldFlow");
     const newFlow = document.getElementById("newFlow");
     const projectBankList = document.getElementById("projectBankList");
+    const addName = document.getElementById("addName");
+    const addAddress = document.getElementById("addAddress");
+    const addVisit = document.getElementById("addVisit");
+    const addUpdate = document.getElementById("addUpdate");
+    const addProjectBtn = document.getElementById("addProjectBtn");
 
     function normalize(s) {
       return String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
@@ -738,6 +787,39 @@
       });
     }
 
+    function nextRank(field) {
+      const max = PROJECTS.reduce((m, p) => Math.max(m, Number(p[field]) || 0), 0);
+      return max + 1;
+    }
+
+    function addProject() {
+      const name = (addName.value || "").trim();
+      const address = (addAddress.value || "").trim();
+      if (!name || !address) {
+        alert("Project name and address are required.");
+        return;
+      }
+      const exists = PROJECTS.some((p) => normalize(p.name) === normalize(name));
+      if (exists) {
+        alert("A project with the same name already exists in this demo.");
+        return;
+      }
+      const visitRank = Number(addVisit.value) || nextRank("lastVisited");
+      const updateRank = Number(addUpdate.value) || nextRank("lastUpdated");
+      PROJECTS.push({
+        name,
+        address,
+        lastVisited: visitRank,
+        lastUpdated: updateRank,
+      });
+      addName.value = "";
+      addAddress.value = "";
+      addVisit.value = "";
+      addUpdate.value = "";
+      renderProjectBank();
+      updateUI();
+    }
+
     document.getElementById("clearBtn").addEventListener("click", () => {
       qInput.value = "";
       updateUI();
@@ -756,6 +838,13 @@
     qInput.addEventListener("input", () => {
       clearTimeout(t);
       t = setTimeout(updateUI, 180);
+    });
+
+    addProjectBtn.addEventListener("click", addProject);
+    [addName, addAddress, addVisit, addUpdate].forEach((el) => {
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") addProject();
+      });
     });
 
     renderProjectBank();
